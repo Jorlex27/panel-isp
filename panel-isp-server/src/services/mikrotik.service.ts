@@ -221,12 +221,11 @@ export async function tambahPelanggan(
     });
 }
 
-export async function suspendPelanggan(ip: string, nama?: string): Promise<void> {
+export async function suspendPelanggan(ip: string, _nama?: string): Promise<void> {
+    // Suspend = blok total: cukup keluarkan IP dari address-list 'pelanggan-aktif'
+    // sehingga firewall men-drop semua traffic-nya. Queue tidak perlu di-throttle
+    // karena traffic memang sudah tidak lewat.
     await withMt(async client => {
-        const id = await simpleQueueIdForPelanggan(client, ip, nama);
-        if (id) {
-            await client.set('queue/simple', id, { 'max-limit': '256k/256k' });
-        }
         await removeFromAddressList(client, ip);
     });
 }

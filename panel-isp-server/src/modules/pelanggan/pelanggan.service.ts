@@ -352,10 +352,9 @@ export async function gantiPaket(
     const paketId = new ObjectId(input.paketId);
     const pel = await getPelanggan(id);
     const paket = await paketService.getPaket(paketId);
-    const maxLimit =
-        pel.status === 'suspend'
-            ? '256k/256k'
-            : `${paket.speedDown}M/${paket.speedUp}M`;
+    // Queue selalu di-set ke kecepatan paket sebenarnya. Saat suspend, akses tetap
+    // diblok lewat address-list (bukan throttle), jadi nilai queue ini aman.
+    const maxLimit = `${paket.speedDown}M/${paket.speedUp}M`;
     const paketLama = pel.paket?.nama ?? '—';
     await gantiPaketMikrotik(pel.nama, maxLimit);
     await langgananService.updatePaketId(id, paketId);
