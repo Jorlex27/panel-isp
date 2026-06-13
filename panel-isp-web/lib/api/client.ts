@@ -24,9 +24,15 @@ apiClient.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response?.status === 401) {
+        const status = error.response?.status;
+        const url: string = error.config?.url ?? '';
+        const isLoginRequest = url.includes('/auth/login');
+        // Hanya tendang ke /login bila token (kedaluwarsa/invalid) ditolak di halaman
+        // terproteksi — JANGAN untuk request login itu sendiri (biar error tampil di form),
+        // dan jangan kalau sudah di /login (cegah reload berulang / loop).
+        if (status === 401 && !isLoginRequest && typeof window !== 'undefined') {
             authStorage.clearToken();
-            if (typeof window !== 'undefined') {
+            if (window.location.pathname !== '/login') {
                 window.location.href = '/login';
             }
         }

@@ -26,6 +26,10 @@ panel-isp-launcher/
 # Distributable launcher (berisi server.env dengan kredensial)
 *.zip
 
+# Python
+__pycache__/
+*.pyc
+
 # Logs
 *.log
 npm-debug.log*
