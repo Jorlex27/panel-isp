@@ -18,7 +18,9 @@ Internet (ISP)
 [TP-Link C]  → 192.168.1.12  (Pak Joko, 10 Mbps)
 ```
 
-TP-Link pelanggan **hanya sebagai penyebar WiFi**. Semua kontrol cukup dari MikroTik karena seluruh traffic pelanggan melewatinya.
+TP-Link pelanggan menyebarkan WiFi ke rumah, tapi **harus dipasang mode Router** (bukan Access Point/Bridge): port **WAN** colok ke jaringan MikroTik, **WAN type = Dynamic IP (DHCP)**, NAT aktif. Dengan begitu tiap rumah tampil sebagai **satu perangkat** (satu MAC WAN) di MikroTik — itulah MAC yang didaftarkan di panel, dan jadi dasar binding IP statis + limit bandwidth + izin internet. Semua kontrol cukup dari MikroTik karena seluruh traffic pelanggan melewatinya.
+
+> Kalau TP-Link dipasang **AP/Bridge mode**, model ini tidak bekerja: tiap perangkat pelanggan minta DHCP sendiri (banyak MAC), hanya satu yang dapat internet. Untuk kasus seperti itu perlu model lain (mis. PPPoE).
 
 ---
 

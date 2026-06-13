@@ -267,3 +267,66 @@ export async function getPelangganKoneksi(): Promise<PelangganKoneksiOverview> {
         rows,
     };
 }
+
+export interface PerangkatBaruRow {
+    ip: string;
+    macAddress: string;
+    hostName: string;
+    dynamic: string;
+}
+
+export interface PerangkatBaruResult {
+    generatedAt: string;
+    ok: boolean;
+    error?: string;
+    rows: PerangkatBaruRow[];
+}
+
+/**
+ * Perangkat yang sudah dapat DHCP lease di jaringan pelanggan tapi BELUM
+ * terdaftar (IP & MAC tidak ada di DB). Dipakai form tambah pelanggan untuk
+ * mengisi MAC otomatis tanpa ketik manual.
+ */
+export async function getPerangkatBaru(): Promise<PerangkatBaruResult> {
+    const { prefix } = getPoolConfig();
+    const pelCol = db.getCollection('pelanggan');
+    const docs = await pelCol.find({}, { projection: { ipAddress: 1, macAddress: 1 } }).toArray();
+    const dbIps = new Set<string>();
+    const dbMacs = new Set<string>();
+    for (const d of docs) {
+        if (typeof d.ipAddress === 'string') dbIps.add((d.ipAddress.split('/')[0] ?? '').trim());
+        if (typeof d.macAddress === 'string') dbMacs.add(d.macAddress.toUpperCase().trim());
+    }
+
+    const rows: PerangkatBaruRow[] = [];
+    let ok = false;
+    let error: string | undefined;
+    try {
+        const client = createMikrotikClient();
+        await client.ping();
+        const leases = await client.print('ip/dhcp-server/lease');
+        ok = true;
+        for (const row of leases) {
+            const addrFull = firstStr(row, 'address') || firstStr(row, 'active-address');
+            const ip = (addrFull.split('/')[0] ?? '').trim();
+            if (!ip) continue;
+            const octs = ip.split('.');
+            if (octs.length !== 4 || octs.slice(0, 3).join('.') !== prefix) continue;
+            const last = Number(octs[3]);
+            if (Number.isNaN(last) || last <= 1 || last >= 255) continue; // lewati gateway & broadcast
+            const mac = firstStr(row, 'mac-address');
+            if (dbIps.has(ip) || (mac && dbMacs.has(mac.toUpperCase()))) continue;
+            rows.push({
+                ip,
+                macAddress: mac,
+                hostName: firstStr(row, 'host-name'),
+                dynamic: firstStr(row, 'dynamic'),
+            });
+            if (rows.length >= 50) break;
+        }
+    } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+    }
+    rows.sort((a, b) => a.ip.localeCompare(b.ip));
+    return { generatedAt: new Date().toISOString(), ok, error, rows };
+}

@@ -169,3 +169,17 @@ export interface PelangganFilter {
     page?: number;
     limit?: number;
 }
+
+export interface PerangkatBaru {
+    ip: string;
+    macAddress: string;
+    hostName: string;
+    dynamic: string;
+}
+
+export interface PerangkatBaruResult {
+    generatedAt: string;
+    ok: boolean;
+    error?: string;
+    rows: PerangkatBaru[];
+}

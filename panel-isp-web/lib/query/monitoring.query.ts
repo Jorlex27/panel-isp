@@ -1,5 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { getMonitoringKoneksiPelanggan, getMonitoringOverview } from '@/lib/api/monitoring.api';
+import {
+    getMonitoringKoneksiPelanggan,
+    getMonitoringOverview,
+    getPerangkatBaru,
+} from '@/lib/api/monitoring.api';
 
 export function useMonitoringOverview() {
     return useQuery({
@@ -14,5 +18,15 @@ export function useMonitoringKoneksiPelanggan() {
         queryKey: ['monitoring-koneksi-pelanggan'],
         queryFn: getMonitoringKoneksiPelanggan,
         refetchInterval: 20_000,
+    });
+}
+
+export function usePerangkatBaru(enabled: boolean) {
+    return useQuery({
+        queryKey: ['perangkat-baru'],
+        queryFn: getPerangkatBaru,
+        enabled,
+        staleTime: 0,
+        gcTime: 0,
     });
 }

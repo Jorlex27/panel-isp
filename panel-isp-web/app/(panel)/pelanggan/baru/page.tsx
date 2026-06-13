@@ -1,16 +1,23 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Radar, Loader2, RotateCw } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Select,
     SelectContent,
@@ -20,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { useCreatePelanggan } from '@/lib/query/pelanggan.query';
 import { useListPaket } from '@/lib/query/paket.query';
+import { usePerangkatBaru } from '@/lib/query/monitoring.query';
 
 const schema = z.object({
     nama: z.string().min(1, 'Nama wajib diisi'),
@@ -47,6 +55,13 @@ export default function TambahPelangganPage() {
     const { data: paketList = [] } = useListPaket();
     const createMutation = useCreatePelanggan();
 
+    const [detectOpen, setDetectOpen] = useState(false);
+    const {
+        data: perangkat,
+        isFetching: detecting,
+        refetch: refetchPerangkat,
+    } = usePerangkatBaru(detectOpen);
+
     const {
         register,
         handleSubmit,
@@ -57,6 +72,12 @@ export default function TambahPelangganPage() {
         resolver: zodResolver(schema),
         defaultValues: { statusBayar: 'belum_bayar' },
     });
+
+    const pilihPerangkat = (mac: string) => {
+        setValue('macAddress', mac, { shouldValidate: true });
+        setDetectOpen(false);
+        toast.success('MAC address terisi otomatis');
+    };
 
     const onSubmit = handleSubmit(async (data) => {
         try {
@@ -105,12 +126,28 @@ export default function TambahPelangganPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label>MAC Address</Label>
+                            <div className="flex items-center justify-between">
+                                <Label>MAC Address</Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 h-7 text-xs"
+                                    onClick={() => setDetectOpen(true)}
+                                >
+                                    <Radar className="w-3.5 h-3.5" />
+                                    Deteksi perangkat baru
+                                </Button>
+                            </div>
                             <Input
                                 {...register('macAddress')}
                                 placeholder="AA:BB:CC:DD:EE:FF"
                                 className="font-mono"
                             />
+                            <p className="text-xs text-slate-500">
+                                MAC port WAN TP-Link (mode Router, WAN = DHCP). Klik &quot;Deteksi&quot; untuk
+                                mengambil dari perangkat yang baru tersambung.
+                            </p>
                             {errors.macAddress && (
                                 <p className="text-xs text-red-500">{errors.macAddress.message}</p>
                             )}
@@ -186,6 +223,64 @@ export default function TambahPelangganPage() {
                     </form>
                 </div>
             </main>
+
+            <Dialog open={detectOpen} onOpenChange={setDetectOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Perangkat baru terdeteksi</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-slate-500">
+                        Perangkat yang sudah tersambung &amp; dapat IP tapi belum terdaftar. Pastikan TP-Link
+                        mode Router (WAN = DHCP) dan baru dinyalakan, lalu pilih MAC-nya.
+                    </p>
+                    <div className="flex justify-end">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => refetchPerangkat()}
+                            disabled={detecting}
+                        >
+                            <RotateCw className={`w-3.5 h-3.5 ${detecting ? 'animate-spin' : ''}`} />
+                            Pindai ulang
+                        </Button>
+                    </div>
+                    <div className="max-h-72 overflow-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+                        {detecting ? (
+                            <div className="py-8 text-center text-sm text-slate-400">
+                                <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                                Memindai...
+                            </div>
+                        ) : perangkat && !perangkat.ok ? (
+                            <div className="py-8 text-center text-sm text-red-500">
+                                Gagal baca MikroTik: {perangkat.error ?? 'tidak diketahui'}
+                            </div>
+                        ) : !perangkat || perangkat.rows.length === 0 ? (
+                            <div className="py-8 text-center text-sm text-slate-400">
+                                Tidak ada perangkat baru. Nyalakan/hubungkan TP-Link lalu pindai ulang.
+                            </div>
+                        ) : (
+                            perangkat.rows.map((d) => (
+                                <button
+                                    type="button"
+                                    key={`${d.macAddress}-${d.ip}`}
+                                    onClick={() => pilihPerangkat(d.macAddress)}
+                                    className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center justify-between"
+                                >
+                                    <div>
+                                        <div className="font-mono text-sm">{d.macAddress}</div>
+                                        <div className="text-xs text-slate-400">
+                                            {d.hostName || 'tanpa nama'} · {d.ip}
+                                        </div>
+                                    </div>
+                                    <span className="text-xs text-blue-600">Pilih</span>
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

@@ -131,11 +131,19 @@ export async function setupAwal(): Promise<void> {
             });
         }
 
+        // Pool DHCP dinamis dipisah dari rentang alokasi statis (IP_POOL_START..END)
+        // agar perangkat baru/belum terdaftar tidak bentrok dengan IP pelanggan tetap.
+        // Dinamis = (IP_POOL_END + 1) .. 254.
+        const poolPrefix = (process.env.IP_POOL_NETWORK ?? '10.10.0.0').split('.').slice(0, 3).join('.');
+        const staticEnd = Number(process.env.IP_POOL_END ?? '200');
+        const dynStart = staticEnd >= 1 && staticEnd < 254 ? staticEnd + 1 : 201;
+        const dynRange = `${poolPrefix}.${dynStart}-${poolPrefix}.254`;
+
         const pool = await client.print('ip/pool', { name: 'pool-pelanggan' });
         if (pool.length === 0) {
             await client.add('ip/pool', {
                 name: 'pool-pelanggan',
-                ranges: '10.10.0.10-10.10.0.254',
+                ranges: dynRange,
             });
         }
 

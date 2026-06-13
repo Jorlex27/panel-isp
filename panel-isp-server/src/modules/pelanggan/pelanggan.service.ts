@@ -19,6 +19,7 @@ import {
 import type { BayarBodyInput, GantiPaketBodyInput, PelangganCreateInput, PelangganUpdateInfoInput } from './pelanggan.schema';
 import { kirimDiscordSafe } from '@/services/discord.service';
 import { recordAudit } from '@modules/audit/audit.service';
+import { createMikrotikClient } from '@shared/utils/mikrotik-rest.util';
 
 const col = () => db.getCollection('pelanggan');
 
@@ -32,6 +33,22 @@ async function assignNextIp(): Promise<string> {
         .find({}, { projection: { ipAddress: 1 } })
         .toArray();
     const takenSet = new Set(taken.map((p) => p.ipAddress));
+
+    // Anti-bentrok: tambahkan IP yang sedang dipakai lease di MikroTik (mis. perangkat
+    // baru yang masih pegang lease dinamis). Best-effort — jika MikroTik tak terjangkau,
+    // lanjut dengan data DB saja agar pembuatan pelanggan tidak terblokir.
+    try {
+        const client = createMikrotikClient();
+        await client.ping();
+        const leases = await client.print('ip/dhcp-server/lease');
+        for (const lease of leases) {
+            const addr = typeof lease.address === 'string' ? lease.address.split('/')[0] : '';
+            if (addr) takenSet.add(addr);
+        }
+    } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        logger.warn(`assignNextIp: gagal baca lease MikroTik, pakai data DB saja: ${msg}`);
+    }
 
     for (let i = start; i <= end; i++) {
         const ip = `${prefix}.${i}`;
