@@ -7,9 +7,12 @@ export const authStorage = {
         return Cookies.get(TOKEN_KEY);
     },
     saveToken(token: string): void {
+        // `secure` hanya saat HTTPS; di localhost (http) cookie secure tak akan tersimpan.
+        const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
         Cookies.set(TOKEN_KEY, token, {
             expires: 7,
             sameSite: 'Lax',
+            secure: isHttps,
         });
     },
     clearToken(): void {

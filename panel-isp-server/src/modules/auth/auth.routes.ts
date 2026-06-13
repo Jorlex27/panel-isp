@@ -4,8 +4,8 @@ import { rateLimit } from '@/middleware/rate-limit.middleware';
 import * as authService from './auth.service';
 
 const loginSchema = z.object({
-    username: z.string().min(1),
-    password: z.string().min(1),
+    username: z.string().min(1).max(64).regex(/^[A-Za-z0-9_.-]+$/, 'Username tidak valid'),
+    password: z.string().min(1).max(128),
 });
 
 const loginRateLimit = rateLimit({
