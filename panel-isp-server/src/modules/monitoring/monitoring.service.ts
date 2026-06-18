@@ -192,7 +192,6 @@ export interface PelangganKoneksiRow {
     ipAddress: string;
     nama: string;
     status: 'aktif' | 'suspend';
-    maxPengguna?: number;
     diAddressList: boolean;
     koneksi: number;
 }
@@ -209,7 +208,7 @@ export async function getPelangganKoneksi(): Promise<PelangganKoneksiOverview> {
     const pelCol = db.getCollection('pelanggan');
     const docs = await pelCol
         .find({})
-        .project({ ipAddress: 1, nama: 1, status: 1, maxPengguna: 1 })
+        .project({ ipAddress: 1, nama: 1, status: 1 })
         .toArray();
 
     const inPool = docs.filter(d => {
@@ -253,7 +252,6 @@ export async function getPelangganKoneksi(): Promise<PelangganKoneksiOverview> {
             ipAddress: ip,
             nama: typeof p.nama === 'string' ? p.nama : '',
             status: st,
-            maxPengguna: typeof p.maxPengguna === 'number' ? p.maxPengguna : undefined,
             diAddressList: addressSet.has(ip),
             koneksi: counts.get(ip) ?? 0,
         };

@@ -2,7 +2,7 @@
 
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Radar, RotateCw } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -46,6 +46,7 @@ import {
     useGantiMac,
 } from '@/lib/query/pelanggan.query';
 import { useListPaket } from '@/lib/query/paket.query';
+import { usePerangkatBaru } from '@/lib/query/monitoring.query';
 import { formatDate, formatRupiah, formatStatusBayar } from '@/lib/utils/format';
 
 const bayarSchema = z.object({
@@ -59,15 +60,6 @@ const editInfoSchema = z.object({
     nama: z.string().min(1, 'Nama wajib diisi'),
     noHp: z.string().optional(),
     alamat: z.string().optional(),
-    maxPengguna: z
-        .union([z.number(), z.nan(), z.undefined()])
-        .transform((v) => {
-            if (v === undefined || (typeof v === 'number' && Number.isNaN(v))) return undefined;
-            const f = Math.floor(v);
-            if (f < 2 || f > 65535) return undefined;
-            return f;
-        })
-        .pipe(z.union([z.undefined(), z.number().int().min(2).max(65535)])),
 });
 type EditInfoForm = z.input<typeof editInfoSchema>;
 
@@ -93,6 +85,12 @@ export default function DetailPelangganPage({
     const [dialog, setDialog] = useState<'suspend' | 'aktifkan' | 'bayar' | 'ganti' | 'hapus' | 'edit' | 'ganti-mac' | null>(null);
     const [gantiPaketId, setGantiPaketId] = useState('');
     const [newMac, setNewMac] = useState('');
+    const [macDetectOpen, setMacDetectOpen] = useState(false);
+    const {
+        data: perangkat,
+        isFetching: detecting,
+        refetch: refetchPerangkat,
+    } = usePerangkatBaru(macDetectOpen);
 
     const bayarForm = useForm<BayarForm>({
         resolver: zodResolver(bayarSchema),
@@ -101,7 +99,7 @@ export default function DetailPelangganPage({
 
     const editInfoForm = useForm<EditInfoForm>({
         resolver: zodResolver(editInfoSchema),
-        defaultValues: { nama: '', noHp: '', alamat: '', maxPengguna: undefined },
+        defaultValues: { nama: '', noHp: '', alamat: '' },
     });
 
     const handleSuspend = async () => {
@@ -154,7 +152,6 @@ export default function DetailPelangganPage({
                     nama: data.nama,
                     noHp: data.noHp,
                     alamat: data.alamat,
-                    maxPengguna: data.maxPengguna === undefined ? null : data.maxPengguna,
                 },
             });
             toast.success('Info pelanggan diperbarui');
@@ -228,12 +225,6 @@ export default function DetailPelangganPage({
                                 <dd className="font-mono font-medium text-slate-900">{pel.ipAddress}</dd>
                             </div>
                             <div>
-                                <dt className="text-slate-500">Max pengguna (koneksi)</dt>
-                                <dd className="font-medium text-slate-900">
-                                    {pel.maxPengguna != null ? `${pel.maxPengguna} (MikroTik)` : 'Tanpa batas'}
-                                </dd>
-                            </div>
-                            <div>
                                 <dt className="text-slate-500">Paket</dt>
                                 <dd className="font-medium text-slate-900">{pel.paket?.nama ?? '—'}</dd>
                             </div>
@@ -290,7 +281,6 @@ export default function DetailPelangganPage({
                                     nama: pel.nama,
                                     noHp: pel.noHp ?? '',
                                     alamat: pel.alamat ?? '',
-                                    maxPengguna: pel.maxPengguna ?? undefined,
                                 });
                                 setDialog('edit');
                             }}>
@@ -300,7 +290,7 @@ export default function DetailPelangganPage({
                                 variant="outline"
                                 size="sm"
                                 className="text-orange-600 border-orange-200 hover:bg-orange-50"
-                                onClick={() => { setNewMac(pel.macAddress); setDialog('ganti-mac'); }}
+                                onClick={() => { setNewMac(pel.macAddress); setMacDetectOpen(false); setDialog('ganti-mac'); }}
                             >
                                 Ganti MAC
                             </Button>
@@ -477,20 +467,6 @@ export default function DetailPelangganPage({
                             <Label>Alamat</Label>
                             <Input {...editInfoForm.register('alamat')} placeholder="Jl. ..." />
                         </div>
-                        <div className="space-y-1.5">
-                            <Label>Max pengguna / koneksi</Label>
-                            <Input
-                                {...editInfoForm.register('maxPengguna', { valueAsNumber: true })}
-                                type="number"
-                                min={2}
-                                max={65535}
-                                placeholder="Kosong = hapus batas"
-                            />
-                            <p className="text-xs text-slate-500">
-                                Kosongkan untuk menonaktifkan batas di MikroTik. Angka = maks. koneksi TCP baru bersamaan
-                                (minimal 2).
-                            </p>
-                        </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setDialog(null)}>Batal</Button>
                             <Button type="submit" disabled={updateInfoMut.isPending}>Simpan</Button>
@@ -507,13 +483,81 @@ export default function DetailPelangganPage({
                         Perhatian: Ganti MAC akan mengupdate DHCP lease di MikroTik. Gunakan MAC address WAN port router pelanggan.
                     </p>
                     <div className="space-y-1.5">
-                        <Label>MAC Address Baru</Label>
+                        <div className="flex items-center justify-between">
+                            <Label>MAC Address Baru</Label>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 h-7 text-xs"
+                                onClick={() => setMacDetectOpen((v) => !v)}
+                            >
+                                <Radar className="w-3.5 h-3.5" />
+                                Deteksi perangkat baru
+                            </Button>
+                        </div>
                         <Input
                             value={newMac}
                             onChange={e => setNewMac(e.target.value)}
                             placeholder="AA:BB:CC:DD:EE:FF"
                             className="font-mono"
                         />
+                        {macDetectOpen && (
+                            <div className="mt-2 rounded-lg border border-slate-200">
+                                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+                                    <span className="text-xs text-slate-500">
+                                        Router baru yang baru tersambung (belum terdaftar)
+                                    </span>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="gap-1.5 h-6 text-xs"
+                                        onClick={() => refetchPerangkat()}
+                                        disabled={detecting}
+                                    >
+                                        <RotateCw className={`w-3 h-3 ${detecting ? 'animate-spin' : ''}`} />
+                                        Pindai
+                                    </Button>
+                                </div>
+                                <div className="max-h-48 overflow-auto divide-y divide-slate-100">
+                                    {detecting ? (
+                                        <div className="py-6 text-center text-sm text-slate-400">
+                                            <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                                            Memindai...
+                                        </div>
+                                    ) : perangkat && !perangkat.ok ? (
+                                        <div className="py-6 text-center text-sm text-red-500">
+                                            Gagal baca MikroTik: {perangkat.error ?? 'tidak diketahui'}
+                                        </div>
+                                    ) : !perangkat || perangkat.rows.length === 0 ? (
+                                        <div className="py-6 text-center text-sm text-slate-400">
+                                            Tidak ada perangkat baru. Nyalakan router baru lalu klik Pindai.
+                                        </div>
+                                    ) : (
+                                        perangkat.rows.map((d) => (
+                                            <button
+                                                type="button"
+                                                key={`${d.macAddress}-${d.ip}`}
+                                                onClick={() => {
+                                                    setNewMac(d.macAddress);
+                                                    setMacDetectOpen(false);
+                                                }}
+                                                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 flex items-center justify-between"
+                                            >
+                                                <div>
+                                                    <div className="font-mono text-sm">{d.macAddress}</div>
+                                                    <div className="text-xs text-slate-400">
+                                                        {d.hostName || 'tanpa nama'} · {d.ip}
+                                                    </div>
+                                                </div>
+                                                <span className="text-xs text-blue-600">Pilih</span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDialog(null)}>Batal</Button>

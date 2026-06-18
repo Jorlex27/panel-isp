@@ -27,7 +27,6 @@ export interface CreatePelangganInput {
     status?: 'aktif' | 'suspend';
     tanggalMulai?: string;
     tanggalExpire?: string;
-    maxPengguna?: number;
 }
 
 export async function createPelanggan(input: CreatePelangganInput): Promise<Pelanggan> {
@@ -78,7 +77,6 @@ export interface UpdateInfoInput {
     nama?: string;
     noHp?: string;
     alamat?: string;
-    maxPengguna?: number | null;
 }
 
 export async function updatePelangganInfo(id: string, input: UpdateInfoInput): Promise<Pelanggan> {

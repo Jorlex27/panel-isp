@@ -20,7 +20,6 @@ function koneksiNotes(row: PelangganKoneksiRow): string[] {
     const notes: string[] = [];
     if (row.status === 'aktif' && !row.diAddressList) notes.push('DB aktif, tidak di address-list');
     if (row.status === 'suspend' && row.diAddressList) notes.push('DB suspend, masih di address-list');
-    if (row.maxPengguna != null && row.koneksi >= row.maxPengguna) notes.push('Di/at batas max pengguna');
     return notes;
 }
 
@@ -94,7 +93,6 @@ export default function MonitoringPage() {
                                                 <TableHead>IP</TableHead>
                                                 <TableHead>Status (DB)</TableHead>
                                                 <TableHead>List MT</TableHead>
-                                                <TableHead>Max pengguna</TableHead>
                                                 <TableHead className="text-right">Koneksi</TableHead>
                                                 <TableHead className="min-w-[140px]">Catatan</TableHead>
                                             </TableRow>
@@ -138,9 +136,6 @@ export default function MonitoringPage() {
                                                             ) : (
                                                                 <span className="text-slate-400 text-xs">—</span>
                                                             )}
-                                                        </TableCell>
-                                                        <TableCell className="text-sm text-slate-700">
-                                                            {row.maxPengguna ?? '—'}
                                                         </TableCell>
                                                         <TableCell className="text-right font-mono text-sm">
                                                             {row.koneksi}

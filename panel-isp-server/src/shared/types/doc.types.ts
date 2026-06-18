@@ -32,7 +32,6 @@ export interface PelangganDoc {
     macAddress: string;
     ipAddress: string;
     status: 'aktif' | 'suspend';
-    maxPengguna?: number;
     createdAt?: Date;
     updatedAt?: Date;
 }

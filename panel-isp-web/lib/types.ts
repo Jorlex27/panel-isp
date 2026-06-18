@@ -42,7 +42,6 @@ export interface Pelanggan {
     macAddress: string;
     ipAddress: string;
     status: 'aktif' | 'suspend';
-    maxPengguna?: number;
     createdAt: string;
     updatedAt: string;
     langganan?: Omit<Langganan, 'pelanggan' | 'paket'>;
@@ -97,7 +96,6 @@ export interface PelangganKoneksiRow {
     ipAddress: string;
     nama: string;
     status: 'aktif' | 'suspend';
-    maxPengguna?: number;
     diAddressList: boolean;
     koneksi: number;
 }

@@ -73,45 +73,6 @@ async function simpleQueueIdForPelanggan(
     return undefined;
 }
 
-function maxPenggunaFirewallComment(ip: string): string {
-    return `panel-isp-connlim-${ip.replace(/\./g, '-')}`;
-}
-
-async function removeMaxPenggunaFirewallRules(client: MikrotikRestClient, ip: string): Promise<void> {
-    const rows = await client.print('ip/firewall/filter', { comment: maxPenggunaFirewallComment(ip) });
-    for (const row of rows) {
-        const rid = rosStr(row, '.id');
-        if (rid) await client.remove('ip/firewall/filter', rid);
-    }
-}
-
-export async function applyMaxPenggunaMikrotik(ip: string, max: number | undefined): Promise<void> {
-    await withMt(async client => {
-        await removeMaxPenggunaFirewallRules(client, ip);
-        if (max === undefined || max < 2) return;
-        const created = await client.add('ip/firewall/filter', {
-            chain: 'forward',
-            'in-interface': pelangganWanIface(),
-            'src-address': ip,
-            'connection-state': 'new',
-            'connection-limit': `${max},1`,
-            action: 'drop',
-            comment: maxPenggunaFirewallComment(ip),
-        });
-        const newId = rosStr(created, '.id');
-        const anchors = await client.print('ip/firewall/filter', { comment: 'izin-pelanggan-aktif' });
-        const destId = anchors[0] ? rosStr(anchors[0], '.id') : undefined;
-        if (newId && destId) {
-            try {
-                await client.postAction('ip/firewall/filter/move', { numbers: newId, destination: destId });
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                logger.warn(`applyMaxPenggunaMikrotik: aturan ditempatkan di akhir rantai; geser manual jika perlu. Move: ${msg}`);
-            }
-        }
-    });
-}
-
 export async function setupAwal(): Promise<void> {
     await withMt(async client => {
         const pelIface = pelangganWanIface();
@@ -255,7 +216,6 @@ export async function aktifkanPelanggan(
 
 export async function hapusPelanggan(ip: string, nama: string): Promise<void> {
     await withMt(async client => {
-        await removeMaxPenggunaFirewallRules(client, ip);
         const queue = await client.print('queue/simple', { name: nama });
         let qid = queue[0] ? rosStr(queue[0], '.id') : undefined;
         if (!qid) {

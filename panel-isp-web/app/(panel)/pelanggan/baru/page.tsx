@@ -36,16 +36,6 @@ const schema = z.object({
     macAddress: z.string().min(1, 'MAC address wajib diisi'),
     paketId: z.string().min(1, 'Paket wajib dipilih'),
     statusBayar: z.enum(['lunas', 'belum_bayar']),
-    maxPengguna: z
-        .union([z.number(), z.nan(), z.undefined()])
-        .transform((v) => {
-            if (v === undefined || (typeof v === 'number' && Number.isNaN(v))) return undefined;
-            const f = Math.floor(v);
-            if (f < 2 || f > 65535) return undefined;
-            return f;
-        })
-        .pipe(z.union([z.undefined(), z.number().int().min(2).max(65535)]))
-        .optional(),
 });
 
 type FormData = z.input<typeof schema>;
@@ -81,9 +71,7 @@ export default function TambahPelangganPage() {
 
     const onSubmit = handleSubmit(async (data) => {
         try {
-            const payload = { ...data };
-            if (payload.maxPengguna === undefined) delete payload.maxPengguna;
-            const result = await createMutation.mutateAsync(payload);
+            const result = await createMutation.mutateAsync(data);
             toast.success('Pelanggan berhasil ditambahkan');
             router.replace(`/pelanggan/${result._id}`);
         } catch (err: unknown) {
@@ -192,24 +180,6 @@ export default function TambahPelangganPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label>Max pengguna / koneksi (opsional)</Label>
-                            <Input
-                                {...register('maxPengguna', { valueAsNumber: true })}
-                                type="number"
-                                min={2}
-                                max={65535}
-                                placeholder="Kosong = tanpa batas"
-                            />
-                            <p className="text-xs text-slate-500">
-                                Batas koneksi TCP baru bersamaan dari IP pelanggan di MikroTik (firewall). Minimal 2
-                                jika diisi.
-                            </p>
-                            {errors.maxPengguna && (
-                                <p className="text-xs text-red-500">{errors.maxPengguna.message}</p>
-                            )}
                         </div>
 
                         <div className="flex justify-end gap-3 pt-2">

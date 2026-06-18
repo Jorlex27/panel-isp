@@ -106,21 +106,20 @@ export default function PelangganPage() {
                                 <TableHead>IP Address</TableHead>
                                 <TableHead>Paket</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Max pengguna</TableHead>
                                 <TableHead>Expire</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-slate-400">
+                                    <TableCell colSpan={5} className="text-center py-8 text-slate-400">
                                         <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
                                         Memuat...
                                     </TableCell>
                                 </TableRow>
                             ) : list.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-slate-400">
+                                    <TableCell colSpan={5} className="text-center py-8 text-slate-400">
                                         {searchDebounced || status !== SEMUA
                                             ? 'Tidak ada hasil'
                                             : 'Belum ada pelanggan'}
@@ -146,9 +145,6 @@ export default function PelangganPage() {
                                             >
                                                 {p.status === 'aktif' ? 'Aktif' : 'Suspend'}
                                             </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-sm text-slate-600">
-                                            {p.maxPengguna != null ? p.maxPengguna : 'Tanpa batas'}
                                         </TableCell>
                                         <TableCell>
                                             {p.langganan?.tanggalExpire

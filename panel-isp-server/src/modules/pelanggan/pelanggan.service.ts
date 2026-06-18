@@ -7,7 +7,6 @@ import * as paketService from '@modules/paket/paket.service';
 import * as langgananService from '@modules/langganan/langganan.service';
 import {
     aktifkanPelanggan,
-    applyMaxPenggunaMikrotik,
     gantiMacMikrotik,
     gantiPaketMikrotik,
     hapusPelanggan,
@@ -173,7 +172,6 @@ export async function createPelanggan(
         macAddress: input.macAddress,
         ipAddress,
         status: statusPel,
-        ...(input.maxPengguna !== undefined ? { maxPengguna: input.maxPengguna } : {}),
         createdAt: now,
         updatedAt: now,
     };
@@ -193,18 +191,10 @@ export async function createPelanggan(
             await suspendPelanggan(ipAddress, input.nama);
         }
         const created = await getPelanggan(pelangganId);
-        try {
-            await applyMaxPenggunaMikrotik(created.ipAddress, created.maxPengguna);
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            logger.warn(`createPelanggan: max pengguna MikroTik gagal: ${msg}`);
-        }
-        const maxLine =
-            created.maxPengguna != null ? `\nMax pengguna: ${created.maxPengguna}` : '';
         const suspendNote =
             statusPel === 'suspend' ? '\nCatatan: dibuat langsung suspend (MikroTik).' : '';
         kirimDiscordSafe(
-            `**${created.nama}**\nIP: \`${created.ipAddress}\`\nMAC: \`${created.macAddress}\`\nPaket: ${created.paket?.nama ?? '—'}\nStatus: ${created.status}\nStatus bayar: ${statusBayar}${maxLine}${suspendNote}`,
+            `**${created.nama}**\nIP: \`${created.ipAddress}\`\nMAC: \`${created.macAddress}\`\nPaket: ${created.paket?.nama ?? '—'}\nStatus: ${created.status}\nStatus bayar: ${statusBayar}${suspendNote}`,
             'Pelanggan baru',
             0x57f287
         );
@@ -387,12 +377,7 @@ export async function updatePelangganInfo(
     if (input.nama !== undefined) $set.nama = input.nama;
     if (input.noHp !== undefined) $set.noHp = input.noHp;
     if (input.alamat !== undefined) $set.alamat = input.alamat;
-    if (input.maxPengguna === null) {
-        await col().updateOne({ _id: id }, { $set, $unset: { maxPengguna: '' } });
-    } else {
-        if (input.maxPengguna !== undefined) $set.maxPengguna = input.maxPengguna;
-        await col().updateOne({ _id: id }, { $set });
-    }
+    await col().updateOne({ _id: id }, { $set });
     if (input.nama !== undefined && input.nama !== prev.nama) {
         try {
             await renameSimpleQueue(prev.nama, input.nama);
@@ -402,12 +387,6 @@ export async function updatePelangganInfo(
         }
     }
     const updated = await getPelanggan(id);
-    try {
-        await applyMaxPenggunaMikrotik(updated.ipAddress, updated.maxPengguna);
-    } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        logger.warn(`updatePelangganInfo: max pengguna MikroTik gagal: ${msg}`);
-    }
     const parts: string[] = [];
     if (input.nama !== undefined && input.nama !== prev.nama) {
         parts.push(`Nama: ${prev.nama} → ${input.nama}`);
@@ -417,14 +396,6 @@ export async function updatePelangganInfo(
     }
     if (input.alamat !== undefined && input.alamat !== prev.alamat) {
         parts.push('Alamat diubah');
-    }
-    if (input.maxPengguna === null && prev.maxPengguna != null) {
-        parts.push(`Max pengguna dihapus (sebelum ${prev.maxPengguna})`);
-    } else if (
-        input.maxPengguna !== undefined &&
-        input.maxPengguna !== prev.maxPengguna
-    ) {
-        parts.push(`Max pengguna: ${prev.maxPengguna ?? '—'} → ${input.maxPengguna}`);
     }
     if (parts.length > 0) {
         kirimDiscordSafe(
@@ -439,8 +410,8 @@ export async function updatePelangganInfo(
             targetId: id,
             targetName: updated.nama,
             summary: `Mengubah info "${updated.nama}": ${parts.join('; ')}`,
-            before: { nama: prev.nama, noHp: prev.noHp, alamat: prev.alamat, maxPengguna: prev.maxPengguna },
-            after: { nama: updated.nama, noHp: updated.noHp, alamat: updated.alamat, maxPengguna: updated.maxPengguna },
+            before: { nama: prev.nama, noHp: prev.noHp, alamat: prev.alamat },
+            after: { nama: updated.nama, noHp: updated.noHp, alamat: updated.alamat },
         });
     }
     return updated;

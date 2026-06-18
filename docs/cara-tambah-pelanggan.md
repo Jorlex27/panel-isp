@@ -72,8 +72,12 @@ itu mengubah MAC dan membuat binding tidak cocok.
    - Alternatif: ketik MAC WAN manual (format `AA:BB:CC:DD:EE:FF`).
 4. Pilih **Paket** (menentukan kecepatan + durasi/siklus tagihan).
 5. **Status Bayar**: `Lunas` jika sudah bayar pemasangan, atau `Belum Bayar`.
-6. **Max pengguna/koneksi (opsional)**: batas koneksi bersamaan dari rumah itu. Kosongkan = tanpa batas.
-7. Klik **Tambah Pelanggan**.
+6. Klik **Tambah Pelanggan**.
+
+> **Batasi jumlah perangkat?** Tidak bisa dari panel/MikroTik — karena TP-Link mode Router
+> (NAT) membuat seluruh rumah tampil sebagai **1 IP**, MikroTik tak bisa melihat perangkat di
+> belakangnya. Kalau perlu batas jumlah perangkat, atur **di TP-Link pelanggan** (mis.
+> _DHCP → Max clients_ atau batas jumlah client WiFi). Panel hanya mengatur **kecepatan** (paket).
 
 Saat disimpan, panel otomatis:
 
