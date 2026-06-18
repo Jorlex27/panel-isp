@@ -11,6 +11,29 @@ sampai internet jalan, lalu operasi harian (bayar, ganti paket, suspend, dll).
 
 ---
 
+## Checklist cepat (TL;DR)
+
+**Pasang pelanggan baru:**
+
+- [ ] TP-Link **mode Router**, WAN = DHCP, colok WAN ke jaringan MikroTik, nyalakan
+- [ ] Panel → **Pelanggan → Tambah Pelanggan**
+- [ ] Isi **Nama / No HP / Alamat**
+- [ ] **MAC** → klik **Deteksi perangkat baru** → pilih TP-Link (atau ketik MAC WAN)
+- [ ] Pilih **Paket** (kecepatan + durasi)
+- [ ] **Status Bayar** → `Lunas` / `Belum Bayar`
+- [ ] Klik **Tambah Pelanggan**
+- [ ] **Reboot TP-Link** → ambil IP statis → **internet jalan** ✅
+
+> Aktivasi internet **otomatis**: pelanggan baru default **status Aktif**, panel langsung
+> membuat lease + queue + memasukkan ke `pelanggan-aktif`. **Tidak perlu klik "Aktifkan".**
+> Tombol **Aktifkan** hanya untuk pelanggan yang sebelumnya **Suspend**.
+
+**Aktifkan yang sedang Suspend:**
+
+- [ ] Detail pelanggan → **Aktifkan** (atau **Bayar** → otomatis aktif) → internet nyala lagi
+
+---
+
 ## 0. Prasyarat penting: TP-Link harus mode Router
 
 Router pelanggan (TP-Link/lainnya) **wajib mode Router/Gateway**, bukan Access Point/Bridge:
